@@ -6,7 +6,11 @@ import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
+import org.springframework.batch.core.launch.support.SimpleJobLauncher;
+import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.repository.support.JobRepositoryFactoryBean;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
@@ -16,11 +20,13 @@ import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilde
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
 import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
+import org.springframework.batch.support.transaction.ResourcelessTransactionManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.transaction.PlatformTransactionManager;
 
 @EnableBatchProcessing
 @Configuration
@@ -35,7 +41,10 @@ public class BatchConfiguration {
   @Value("${input-orders}")
   private String fileInput;
 
-  @Bean
+  @Autowired
+  DataSource dataSource;
+
+  @Bean(name = "order_job")
   public Job importOrders(Step step1,JobCompleteTeller jobCompleteTeller) {
     return jobBuilderFactory.get("importOrders")
         .incrementer(new RunIdIncrementer())
@@ -44,6 +53,7 @@ public class BatchConfiguration {
         .end()
         .build();
   }
+
 
   @Bean
   public Step step1(ItemWriter<Order> writer, ItemReader<Order> reader,
@@ -82,4 +92,24 @@ public class BatchConfiguration {
         .dataSource(dataSource)
         .build();
   }
+/*
+  public JobLauncher getJobLauncher() throws Exception {
+    SimpleJobLauncher jobLauncher = new SimpleJobLauncher();
+    jobLauncher.setJobRepository(getJobRepository());
+    jobLauncher.afterPropertiesSet();
+    return jobLauncher;
+  }
+  private PlatformTransactionManager getTransactionManager() {
+    return new ResourcelessTransactionManager();
+  }
+
+  private JobRepository getJobRepository() throws Exception {
+    JobRepositoryFactoryBean factory = new JobRepositoryFactoryBean();
+    factory.setDataSource(dataSource);
+    factory.setTransactionManager(getTransactionManager());
+    factory.afterPropertiesSet();
+    return (JobRepository) factory.getObject();
+  }
+  */
+
 }
